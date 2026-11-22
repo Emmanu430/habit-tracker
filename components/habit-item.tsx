@@ -3,9 +3,14 @@
     import { useTransition } from "react";
     import { toggleToday, deleteHabit } from "@/app/actions/habits";
 
-    type Props = { id: string; name: string; doneToday: boolean };
+    type Props = {
+    id: string;
+    name: string;
+    doneToday: boolean;
+    streak: number;
+    };
 
-    export default function HabitItem({ id, name, doneToday }: Props) {
+    export default function HabitItem({ id, name, doneToday, streak }: Props) {
     const [pending, startTransition] = useTransition();
 
     return (
@@ -24,7 +29,12 @@
             >
             ✓
             </span>
+            <div>
             <span className={doneToday ? "text-zinc-500 line-through" : "text-white"}>{name}</span>
+            <p className="text-xs text-zinc-500">
+                {streak > 0 ? `🔥 ${streak} day${streak === 1 ? "" : "s"} in a row` : "No streak yet"}
+            </p>
+            </div>
         </button>
         <button
             onClick={() => startTransition(() => { deleteHabit(id); })}

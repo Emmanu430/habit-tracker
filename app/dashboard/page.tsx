@@ -3,6 +3,7 @@
     import { connection } from "next/server";
     import { createClient } from "@/lib/supabase/server";
     import { todayString } from "@/lib/date";
+    import { calculateStreak } from "@/lib/streaks";
     import LogoutButton from "@/components/logout-button";
     import AddHabitForm from "@/components/add-habit-form";
     import HabitItem from "@/components/habit-item";
@@ -20,7 +21,7 @@
     }
 
     async function DashboardContent() {
-    await connection(); // Per-request: the data below depends on the user and today's date
+    await connection();
 
     const supabase = await createClient();
     const {
@@ -33,10 +34,20 @@
 
     const [{ data: habits }, { data: logs }] = await Promise.all([
         supabase.from("habits").select("id, name").order("created_at"),
-        supabase.from("habit_logs").select("habit_id").eq("log_date", today),
+        supabase.from("habit_logs").select("habit_id, log_date"),
     ]);
 
-    const doneIds = new Set((logs ?? []).map((l) => l.habit_id));
+    // Group every completion date by habit, so each habit can compute its streak
+    const datesByHabit = new Map<string, string[]>();
+    for (const log of logs ?? []) {
+        const list = datesByHabit.get(log.habit_id) ?? [];
+        list.push(log.log_date);
+        datesByHabit.set(log.habit_id, list);
+    }
+
+    const doneIds = new Set(
+        (logs ?? []).filter((l) => l.log_date === today).map((l) => l.habit_id)
+    );
     const doneCount = doneIds.size;
     const total = habits?.length ?? 0;
 
@@ -66,6 +77,7 @@
                 id={habit.id}
                 name={habit.name}
                 doneToday={doneIds.has(habit.id)}
+                streak={calculateStreak(datesByHabit.get(habit.id) ?? [], today)}
                 />
             ))}
             </ul>
