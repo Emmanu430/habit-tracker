@@ -1,11 +1,27 @@
+    import { Suspense } from "react";
     import { redirect } from "next/navigation";
+    import { connection } from "next/server";
     import { createClient } from "@/lib/supabase/server";
     import { todayString } from "@/lib/date";
     import LogoutButton from "@/components/logout-button";
     import AddHabitForm from "@/components/add-habit-form";
     import HabitItem from "@/components/habit-item";
 
-    export default async function DashboardPage() {
+    export default function DashboardPage() {
+    return (
+        <main className="min-h-screen bg-zinc-950 px-4 py-10 text-white">
+        <div className="mx-auto max-w-2xl space-y-8">
+            <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardContent />
+            </Suspense>
+        </div>
+        </main>
+    );
+    }
+
+    async function DashboardContent() {
+    await connection(); // Per-request: the data below depends on the user and today's date
+
     const supabase = await createClient();
     const {
         data: { user },
@@ -25,37 +41,51 @@
     const total = habits?.length ?? 0;
 
     return (
-        <main className="min-h-screen bg-zinc-950 px-4 py-10 text-white">
-        <div className="mx-auto max-w-2xl space-y-8">
-            <header className="flex items-center justify-between">
+        <>
+        <header className="flex items-center justify-between">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Your habits</h1>
-                <p className="mt-1 text-sm text-zinc-400">
+            <h1 className="text-2xl font-semibold tracking-tight">Your habits</h1>
+            <p className="mt-1 text-sm text-zinc-400">
                 {doneCount} of {total} done today
-                </p>
+            </p>
             </div>
             <LogoutButton />
-            </header>
+        </header>
 
-            <AddHabitForm />
+        <AddHabitForm />
 
-            {total === 0 ? (
+        {total === 0 ? (
             <p className="rounded-xl border border-dashed border-white/10 p-8 text-center text-sm text-zinc-500">
-                No habits yet. Add your first one above.
+            No habits yet. Add your first one above.
             </p>
-            ) : (
+        ) : (
             <ul className="space-y-2">
-                {habits!.map((habit) => (
+            {habits!.map((habit) => (
                 <HabitItem
-                    key={habit.id}
-                    id={habit.id}
-                    name={habit.name}
-                    doneToday={doneIds.has(habit.id)}
+                key={habit.id}
+                id={habit.id}
+                name={habit.name}
+                doneToday={doneIds.has(habit.id)}
                 />
-                ))}
+            ))}
             </ul>
-            )}
+        )}
+        </>
+    );
+    }
+
+    function DashboardSkeleton() {
+    return (
+        <div className="animate-pulse space-y-8">
+        <div className="space-y-2">
+            <div className="h-7 w-40 rounded bg-white/10" />
+            <div className="h-4 w-28 rounded bg-white/5" />
         </div>
-        </main>
+        <div className="h-11 rounded-xl bg-white/5" />
+        <div className="space-y-2">
+            <div className="h-14 rounded-xl bg-white/5" />
+            <div className="h-14 rounded-xl bg-white/5" />
+        </div>
+        </div>
     );
 }
