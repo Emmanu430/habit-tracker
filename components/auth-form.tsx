@@ -3,6 +3,7 @@
     import { useState, type FormEvent } from "react";
     import { useRouter } from "next/navigation";
     import Link from "next/link";
+    import PasswordInput from "@/components/password-input";
     import { createClient } from "@/lib/supabase/client";
 
     type Props = { mode: "login" | "signup" };
@@ -82,9 +83,8 @@
                 <label htmlFor="password" className="text-sm font-medium text-zinc-300">
                     Password
                 </label>
-                <input
+                <PasswordInput
                     id="password"
-                    type="password"
                     required
                     minLength={6}
                     autoComplete={isLogin ? "current-password" : "new-password"}
