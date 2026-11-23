@@ -5,7 +5,8 @@
 
     let flushing = false;
 
-    // Sends queued changes to Supabase in order. Returns true if the queue is empty.
+    const MAX_ATTEMPTS = 5;
+
     export async function flushOutbox(db: UserDB): Promise<boolean> {
     if (flushing || !navigator.onLine) return false;
     flushing = true;
@@ -17,17 +18,33 @@
         const keys = await db.getAllKeys("outbox");
         if (keys.length === 0) return true;
 
-        const ops = await db.getAll("outbox");
-        for (let i = 0; i < ops.length; i++) {
-            const { error } = await send(supabase, ops[i]);
-            if (error) return false; // stop here and retry on the next sync
+        const entries = await db.getAll("outbox");
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const attempts = entry.attempts ?? 0;
+
+            const { error } = await send(supabase, entry);
+            if (!error) {
             await db.delete("outbox", keys[i]);
+            continue;
+            }
+
+            if (attempts + 1 >= MAX_ATTEMPTS) {
+            // Give up on this change so it can't block the rest of the queue
+            console.warn("Dropping change after repeated failures:", entry, error.message);
+            await db.delete("outbox", keys[i]);
+            continue;
+            }
+
+            // Record the failure and stop, so changes still sync in order
+            await db.put("outbox", { ...entry, attempts: attempts + 1 }, keys[i]);
+            return false;
         }
         }
     } finally {
         flushing = false;
     }
-    }
+}
 
     async function send(supabase: Supabase, op: OutboxOp) {
     if (op.type === "addHabit") {

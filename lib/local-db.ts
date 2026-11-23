@@ -10,7 +10,7 @@
     interface HabitDB extends DBSchema {
     habits: { key: string; value: LocalHabit };
     logs: { key: string; value: LocalLog };
-    outbox: { key: number; value: OutboxOp };
+    outbox: { key: number; value: OutboxOp & { attempts?: number } };
     }
 
     export type UserDB = IDBPDatabase<HabitDB>;
