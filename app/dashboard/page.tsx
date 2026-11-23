@@ -2,11 +2,8 @@
     import { redirect } from "next/navigation";
     import { connection } from "next/server";
     import { createClient } from "@/lib/supabase/server";
-    import { todayString } from "@/lib/date";
-    import { calculateStreak } from "@/lib/streaks";
     import LogoutButton from "@/components/logout-button";
-    import AddHabitForm from "@/components/add-habit-form";
-    import HabitItem from "@/components/habit-item";
+    import HabitsApp from "@/components/habits-app";
 
     export default function DashboardPage() {
     return (
@@ -30,58 +27,13 @@
 
     if (!user) redirect("/login");
 
-    const today = todayString();
-
-    const [{ data: habits }, { data: logs }] = await Promise.all([
-        supabase.from("habits").select("id, name").order("created_at"),
-        supabase.from("habit_logs").select("habit_id, log_date"),
-    ]);
-
-    // Group every completion date by habit, so each habit can compute its streak
-    const datesByHabit = new Map<string, string[]>();
-    for (const log of logs ?? []) {
-        const list = datesByHabit.get(log.habit_id) ?? [];
-        list.push(log.log_date);
-        datesByHabit.set(log.habit_id, list);
-    }
-
-    const doneIds = new Set(
-        (logs ?? []).filter((l) => l.log_date === today).map((l) => l.habit_id)
-    );
-    const doneCount = doneIds.size;
-    const total = habits?.length ?? 0;
-
     return (
         <>
         <header className="flex items-center justify-between">
-            <div>
             <h1 className="text-2xl font-semibold tracking-tight">Your habits</h1>
-            <p className="mt-1 text-sm text-zinc-400">
-                {doneCount} of {total} done today
-            </p>
-            </div>
             <LogoutButton />
         </header>
-
-        <AddHabitForm />
-
-        {total === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 p-8 text-center text-sm text-zinc-500">
-            No habits yet. Add your first one above.
-            </p>
-        ) : (
-            <ul className="space-y-2">
-            {habits!.map((habit) => (
-                <HabitItem
-                key={habit.id}
-                id={habit.id}
-                name={habit.name}
-                doneToday={doneIds.has(habit.id)}
-                streak={calculateStreak(datesByHabit.get(habit.id) ?? [], today)}
-                />
-            ))}
-            </ul>
-        )}
+        <HabitsApp userId={user.id} />
         </>
     );
     }
@@ -89,10 +41,7 @@
     function DashboardSkeleton() {
     return (
         <div className="animate-pulse space-y-8">
-        <div className="space-y-2">
-            <div className="h-7 w-40 rounded bg-white/10" />
-            <div className="h-4 w-28 rounded bg-white/5" />
-        </div>
+        <div className="h-7 w-40 rounded bg-white/10" />
         <div className="h-11 rounded-xl bg-white/5" />
         <div className="space-y-2">
             <div className="h-14 rounded-xl bg-white/5" />

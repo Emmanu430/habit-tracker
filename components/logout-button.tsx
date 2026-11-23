@@ -2,12 +2,14 @@
 
     import { useRouter } from "next/navigation";
     import { createClient } from "@/lib/supabase/client";
+    import { clearLocalData } from "@/lib/local-db";
 
     export default function LogoutButton() {
     const router = useRouter();
     const supabase = createClient();
 
     async function handleLogout() {
+        await clearLocalData();
         await supabase.auth.signOut();
         router.push("/login");
         router.refresh();
